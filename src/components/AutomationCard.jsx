@@ -9,7 +9,8 @@ export default function AutomationCard({ item }) {
   const [result, setResult] = useState(null)
   const [showTerms, setShowTerms] = useState(false)
   const [agree, setAgree] = useState(false)
-  const [locked, setLocked] = useState(false) // prevents toggling out mid-flow
+  const [locked, setLocked] = useState(false) // prevents toggling during flip
+  const [displayedPrice, setDisplayedPrice] = useState(item.price)
 
   const baseUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:8000'
 
@@ -23,42 +24,29 @@ export default function AutomationCard({ item }) {
       const res = await fetch(`${baseUrl}/api/flip`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ base_price: item.price }) // backend default win_odds = 0.1 (90% surcharge path)
+        body: JSON.stringify({ base_price: displayedPrice })
       })
       if (!res.ok) throw new Error('Flip failed')
       const data = await res.json()
       setResult(data)
+      if (data && typeof data.final_price === 'number') {
+        setDisplayedPrice(data.final_price)
+      }
     } catch (e) {
       setResult({ error: e.message })
     } finally {
       setFlipping(false)
+      setLocked(false)
     }
   }
 
   const onToggleFunMode = (checked) => {
-    if (locked) return // cannot exit while locked into a flip decision
+    if (locked) return
     setFunMode(checked)
     if (!checked) {
-      // reset state when turning off flip mode
       setResult(null)
       setAgree(false)
     }
-  }
-
-  const acceptPrice = () => {
-    // In a real app, proceed to checkout with result.final_price
-    // For now, we just unlock and show a small confirmation
-    setLocked(false)
-    setFunMode(false)
-    alert(`Proceeding with ${result ? formatUSD(result.final_price) : formatUSD(item.price)}`)
-    setResult(null)
-  }
-
-  const cancelFlip = () => {
-    // Cancels the flip offer but keeps user from toggling mid-animation exploit
-    setLocked(false)
-    setResult(null)
-    setAgree(false)
   }
 
   const coinVariants = {
@@ -81,8 +69,8 @@ export default function AutomationCard({ item }) {
           <p className="mt-1 text-sm text-zinc-400">{item.description}</p>
         </div>
         <div className="text-right">
-          <div className="text-2xl font-extrabold text-white">{formatUSD(item.price)}</div>
-          <div className="text-xs text-zinc-500">Standard</div>
+          <div className="text-2xl font-extrabold text-white">{formatUSD(displayedPrice)}</div>
+          <div className="text-xs text-zinc-500">Price</div>
         </div>
       </div>
 
@@ -94,10 +82,7 @@ export default function AutomationCard({ item }) {
             onChange={(e) => onToggleFunMode(e.target.checked)}
             disabled={locked}
           />
-          <span className="flex items-center gap-1">
-            Flip Mode
-            <span className="text-xs text-zinc-500">(90% chance of surcharge)</span>
-          </span>
+          <span className="flex items-center gap-1">Flip Mode</span>
         </label>
 
         {/* Primary CTA morphs between Buy and Flip; during flip the SAME element spins as the coin */}
@@ -105,7 +90,7 @@ export default function AutomationCard({ item }) {
           layoutId={`cta-${item.id}`}
           onClick={() => {
             if (!funMode) {
-              alert(`Proceeding with ${formatUSD(item.price)}`)
+              alert(`Proceeding with ${formatUSD(displayedPrice)}`)
             } else {
               setShowTerms(true)
             }
@@ -116,37 +101,9 @@ export default function AutomationCard({ item }) {
           animate={funMode && flipping ? 'flipping' : 'idle'}
           variants={coinVariants}
         >
-          {funMode ? 'Flip' : 'Buy Now'}
+          {funMode ? (flipping ? '' : 'Flip') : 'Buy Now'}
         </motion.button>
       </div>
-
-      {/* Result Panel */}
-      {result && (
-        <div className="mt-4 rounded-xl border border-white/10 bg-zinc-800/60 p-4">
-          {result.error ? (
-            <p className="text-red-400 text-sm">{result.error}</p>
-          ) : result.outcome === 'win' ? (
-            <div>
-              <p className="text-emerald-400 font-semibold">You won a discount</p>
-              <p className="text-zinc-300 text-sm mt-1">New price: <span className="font-bold">{formatUSD(result.final_price)}</span></p>
-              <div className="mt-3 flex gap-2">
-                <button onClick={acceptPrice} className="rounded-lg bg-emerald-500 text-white px-3 py-2 text-sm hover:bg-emerald-600">Accept</button>
-                <button onClick={cancelFlip} className="rounded-lg bg-zinc-700 text-white px-3 py-2 text-sm hover:bg-zinc-600">Cancel</button>
-              </div>
-            </div>
-          ) : (
-            <div>
-              <p className="text-amber-400 font-semibold">Surcharge applied</p>
-              <p className="text-zinc-300 text-sm mt-1">New price: <span className="font-bold">{formatUSD(result.final_price)}</span></p>
-              <p className="text-xs text-zinc-500 mt-1">Standard purchase is temporarily locked while Flip Mode is active.</p>
-              <div className="mt-3 flex gap-2">
-                <button onClick={acceptPrice} className="rounded-lg bg-amber-500 text-black px-3 py-2 text-sm hover:bg-amber-600">Accept</button>
-                <button onClick={cancelFlip} className="rounded-lg bg-zinc-700 text-white px-3 py-2 text-sm hover:bg-zinc-600">Cancel</button>
-              </div>
-            </div>
-          )}
-        </div>
-      )}
 
       {/* Terms Modal */}
       <AnimatePresence>
@@ -154,7 +111,7 @@ export default function AutomationCard({ item }) {
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-50 grid place-items-center bg-black/70 p-6">
             <motion.div initial={{ y: 20, opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ y: 8, opacity: 0 }} className="max-w-md w-full rounded-2xl bg-zinc-900 p-6 border border-white/10">
               <h4 className="text-white font-semibold text-lg">Flip Terms</h4>
-              <p className="mt-2 text-sm text-zinc-300">By flipping, you agree to pay the coin-decided price (discount or surcharge). Standard purchase is locked until you accept or cancel.</p>
+              <p className="mt-2 text-sm text-zinc-300">By flipping, you agree the coin may discount or apply a surcharge. The resulting price applies immediately.</p>
               <label className="mt-4 flex items-center gap-2 text-sm text-zinc-300">
                 <input id="agree" type="checkbox" checked={agree} onChange={(e) => setAgree(e.target.checked)} />
                 I understand

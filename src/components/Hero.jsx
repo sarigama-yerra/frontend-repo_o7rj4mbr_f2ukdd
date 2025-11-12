@@ -28,7 +28,7 @@ export default function Hero({ onFlipClick, onExploreClick }) {
           transition={{ delay: 0.1, duration: 0.6 }}
           className="mt-5 max-w-2xl text-lg text-zinc-300"
         >
-          Premium automations with a playful twist. Buy at the standard price — or take a 90/10 chance to win a discount or pay a small premium.
+          Premium automations with a playful twist.
         </motion.p>
 
         <div className="mt-8 flex flex-wrap gap-3">
@@ -45,13 +45,9 @@ export default function Hero({ onFlipClick, onExploreClick }) {
             whileHover={{ scale: 1.05, rotate: -1 }}
             whileTap={{ scale: 0.97 }}
             onClick={onFlipClick}
-            className="group flex items-center gap-2 rounded-lg bg-gradient-to-r from-amber-400 to-yellow-500 text-black font-semibold px-5 py-3 shadow-[0_8px_30px_rgba(251,191,36,0.45)]"
+            className="group rounded-lg bg-gradient-to-r from-amber-400 to-yellow-500 text-black font-semibold px-5 py-3 shadow-[0_8px_30px_rgba(251,191,36,0.45)]"
           >
-            <span className="relative inline-block">
-              <span className="absolute inset-0 rounded-full blur-xl opacity-40 bg-amber-400" />
-              <span className="relative">Flip the Coin 💰</span>
-            </span>
-            <span className="ml-1 text-black/70 group-hover:animate-spin-slow">🪙</span>
+            Flip the Coin
           </motion.button>
         </div>
       </div>
@@ -60,8 +56,6 @@ export default function Hero({ onFlipClick, onExploreClick }) {
         .group:hover .coin {
           filter: drop-shadow(0 0 24px rgba(251,191,36,.7));
         }
-        .animate-spin-slow { animation: spin 1.5s linear infinite; }
-        @keyframes spin { from { transform: rotate(0deg);} to { transform: rotate(360deg);} }
       `}</style>
     </section>
   )
